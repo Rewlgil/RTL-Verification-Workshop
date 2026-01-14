@@ -1,0 +1,44 @@
+# Default to LF for everything (safer for cross-platform Make/Python/Verilog)
+* text=auto eol=lf
+
+# Explicitly ensure Makefiles use LF (CRLF can break Make on some systems)
+Makefile text eol=lf
+makefile text eol=lf
+
+# Windows Batch files must remain CRLF
+*.bat text eol=crlf
+
+# Shell scripts must be LF
+*.sh text eol=lf
+
+# Verilog, Python, and Markdown
+*.v text eol=lf
+*.py text diff=python eol=lf
+*.md text eol=lf
+
+# Binary artifacts
+*.vcd binary
+*.vvp binary
+*.exe binary
+
+# Compressed files are Binary
+*.zip   binary
+*.7z    binary
+*.tar   binary
+*.gz    binary
+
+# Docs are Binary
+*.pdf   binary
+*.doc   binary
+*.docx  binary
+*.ppt   binary
+*.pptx  binary
+*.xls   binary
+*.xlsx  binary
+
+# Images are Binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
