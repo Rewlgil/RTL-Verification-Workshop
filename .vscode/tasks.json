@@ -1,0 +1,41 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build: Clean",
+            "type": "shell",
+            "command": "python3",
+            "args": ["manage.py", "clean"],
+            "options": { "cwd": "${workspaceFolder}/sim" },
+            "problemMatcher": [],
+            "group": "build"
+        },
+        {
+            "label": "Build: Synthesis Only",
+            "type": "shell",
+            "command": "python3",
+            "args": ["manage.py", "syn"],
+            "options": { "cwd": "${workspaceFolder}/sim" },
+            "problemMatcher": [],
+            "group": "build"
+        },
+        {
+            "label": "Run: RTL Simulation",
+            "type": "shell",
+            "command": "python3",
+            "args": ["manage.py", "simrtl"],
+            "options": { "cwd": "${workspaceFolder}/sim" },
+            "problemMatcher": [],
+            "group": "test"
+        },
+        {
+            "label": "Run: Gate Simulation",
+            "type": "shell",
+            "command": "python3",
+            "args": ["manage.py", "simgates"],
+            "options": { "cwd": "${workspaceFolder}/sim" },
+            "problemMatcher": [],
+            "group": "test"
+        }
+    ]
+}

@@ -1,0 +1,56 @@
+{
+    "files.eol": "\n",
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
+    "editor.renderWhitespace": "selection",
+
+    "[bat]": {
+        "files.eol": "\r\n"
+    },
+    
+    // Hides build artifacts from the side bar
+    "files.exclude": {
+        "sim/oss-cad-suite*": true,
+        // "**/*.obsolete*": true,
+
+        "**/.git": true,
+        "**/.DS_Store": true,
+        "**/__pycache__": true,
+        "**/*.vcd": true,
+        "**/*.vvp": true,
+        "**/*.o": true,
+        "**/*.exe": true,
+        // Specific artifacts from your makefile
+        "**/fpmul_syn.v": true, 
+        "**/simrtl": true,
+        "**/simgates": true,
+        "**/synthesis_successful": true
+    },
+
+    // Search exclusions (so you don't grep through 500MB wave files)
+    "search.exclude": {
+        "**/*.vcd": true,
+        "**/*.vvp": true,
+        "**/fpmul_syn.v": true
+    },
+
+    // Makefiles MUST use tabs, not spaces
+    "[makefile]": {
+        "editor.insertSpaces": false,
+        "editor.tabSize": 4,
+        "editor.detectIndentation": false
+    },
+
+    // Python recommended defaults
+    "[python]": {
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4,
+        "editor.formatOnSave": true
+    },
+
+    // Verilog recommended defaults
+    "[verilog]": {
+        "editor.insertSpaces": true,
+        "editor.tabSize": 4
+    }
+}
