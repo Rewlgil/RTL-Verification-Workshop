@@ -80,8 +80,9 @@ module dut(
   output out_h
 );
 
+  // Delay the input signal to address the hold time violations
   wire #9 in_s = in;   // setup violation
-  wire #0.5 in_h = in; // hold violation
+  wire #1 in_h = in;   // hold violation
 
   // 2 FFs with delays
   dff_shchk ff_s(.clk(clk), .d(in_s), .q(out_s));
@@ -102,7 +103,8 @@ module testbench;
   initial begin
     clk = 1;
     forever begin
-      #5  // half clock cycle
+      // Slow down the clock to address the setup time violation
+      #5.5  // half clock cycle
         clk = ~clk;
     end
   end
