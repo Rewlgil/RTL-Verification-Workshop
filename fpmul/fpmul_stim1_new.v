@@ -88,19 +88,33 @@ endfunction
 
 //  drive inputs
 
+integer input_file;
+integer output_file;
+integer fd;
+
 initial begin
+    $dumpfile("fpmul_stim1_new.vcd");
+    $dumpvars(0, fpmul_stim1_v_tf);
+
+    input_file  = $fopen("test_case.csv",   "r");
+    output_file = $fopen("test_result.csv", "w");
 
     // ******** drive begins here ************
 
-    a = 0; b = 0;
+    fd = $fscanf(input_file, "%b,%b", a, b);
     delay(1);
 
-    if (r == 0 && omu == 0) begin
-      $display("------ TEST PASSED ------");
-    end else begin
-      $display("------ TEST FAILED ------");
+    while (fd == 2) begin
+        $fdisplay(output_file, "%b,%b,%b,%b", a, b, r, omu);
+        $display(output_file, "\t%b %b %b %b", a, b, r, omu);
+        fd = $fscanf(input_file, "%b,%b", a, b);
+        delay(1);
     end
 
+    $display("\t\t------ TEST ENDED ------");
+
+    $fclose(input_file);
+    $fclose(output_file);
     $finish;
 
 end
