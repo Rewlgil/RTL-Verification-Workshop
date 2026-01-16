@@ -65,7 +65,27 @@ sudo apt update && sudo apt upgrade -y
 
 install software:
 ```
-sudo apt install -y make gcc
+sudo apt install -y make gcc git
+```
+
+clone this repo:
+```
+git clone https://github.com/kongkrit/RTL-Verification-Workshop
+```
+
+cd into `sim`
+```
+cd sim
+```
+
+Install python on linux
+```
+./1_install_python_linux.sh
+```
+
+Install `oss-cad-suite`
+```
+python3 2_setup_oss_cad.py
 ```
 
 
