@@ -105,7 +105,7 @@ initial begin
     delay(1);
 
     while (fd == 2) begin
-        $fdisplay(output_file, "%b,%b,%b,%b", a, b, r, omu);
+        $fdisplay(output_file, "'%b,'%b,'%b,'%b", a, b, r, omu);
         $display(output_file, "\t%b %b %b %b", a, b, r, omu);
         fd = $fscanf(input_file, "%b,%b", a, b);
         delay(1);

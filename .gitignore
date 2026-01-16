@@ -6,6 +6,9 @@ __pycache__/
 
 # --- oss-cad-suite files ---
 sim/oss-cad*
+sim/make*
+
+*/obj_dir/*
 
 # --- VS Code ---
 # Ignore personal workspace state, but KEEP shared config

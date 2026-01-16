@@ -96,6 +96,8 @@ integer pattern_file;
 integer count;
 
 initial begin
+    $dumpfile("fpmul_stim2.vcd");
+    $dumpvars(0, fpmul_stim1_v_tf);
 
     pattern_file = $fopen("patterns.txt", "r");
     if (pattern_file == 0) begin
