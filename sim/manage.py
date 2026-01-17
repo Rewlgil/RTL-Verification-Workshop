@@ -4,6 +4,7 @@ import subprocess
 import argparse
 import shutil
 import platform
+import re
 
 # --- Auto-configure PATH ---
 BASE_PATH = os.path.dirname(__file__)
@@ -25,6 +26,7 @@ if paths_to_add:
 TOP_MODULE = "fpmul"
 RTL_SOURCES = ["fpmul.v"] 
 TESTBENCH = "fpmul_stim1_new.v"
+TB_MODULE = "fpmul_stim1_v_tf" # Top module name inside the testbench file
 SYN_OUTPUT = "fpmul_syn.v"
 
 IS_WINDOWS = platform.system() == "Windows"
@@ -35,6 +37,9 @@ YOSYS = "yosys" + EXE_EXT
 YOSYS_CONFIG = "yosys-config" 
 IVERILOG = "iverilog" + EXE_EXT
 VVP = "vvp" + EXE_EXT
+VERILATOR = "verilator" + EXE_EXT
+VERILATOR_COVERAGE = "verilator_coverage" + EXE_EXT
+GENHTML = "genhtml" + ("" if not IS_WINDOWS else ".perl")
 
 RTL_EXE = "simrtl"
 GATES_EXE = "simgates"
@@ -94,13 +99,37 @@ def get_yosys_datdir():
 
 def clean():
     print("--- Cleaning ---")
-    files_to_remove = [RTL_EXE, GATES_EXE, SYN_OUTPUT, "synthesis_successful"]
+    files_to_remove = [RTL_EXE, GATES_EXE, SYN_OUTPUT, "synthesis_successful", "coverage.dat", "coverage.info"]
     files_to_remove.extend([f"{RTL_EXE}.exe", f"{GATES_EXE}.exe"]) 
-
+    
+    # 1. Remove individual files in root
     for filename in files_to_remove:
         if os.path.exists(filename):
             os.remove(filename)
             print(f"Removed {filename}")
+            
+    # 2. Remove folders that should be fully deleted
+    dirs_to_remove = ["coverage_report"]
+    for dirname in dirs_to_remove:
+        if os.path.exists(dirname):
+            shutil.rmtree(dirname)
+            print(f"Removed directory {dirname}")
+
+    # 3. Clean obj_dir but PRESERVE .hello
+    if os.path.exists("obj_dir"):
+        print("Cleaning obj_dir (preserving .hello)...")
+        for item in os.listdir("obj_dir"):
+            if item == ".hello":
+                continue  # Skip the placeholder
+            
+            item_path = os.path.join("obj_dir", item)
+            try:
+                if os.path.isfile(item_path) or os.path.islink(item_path):
+                    os.unlink(item_path) # Delete file
+                elif os.path.isdir(item_path):
+                    shutil.rmtree(item_path) # Delete directory
+            except Exception as e:
+                print(f"Failed to delete {item_path}: {e}")
 
 def synthesize():
     print("--- Synthesizing ---")
@@ -138,6 +167,93 @@ def sim_rtl():
     cmd_run = [VVP, RTL_EXE]
     run_command(cmd_run)
 
+def sim_rtl_coverage():
+    print("--- RTL Coverage (Verilator) ---")
+    
+    # 1. Compile (Instrument for Coverage)
+    # verilator --binary --coverage config.vlt fpmul.v fpmul_stim1_new.v --top-module fpmul_stim1_v_tf
+    cmd_verilate = [
+        VERILATOR,
+        "--binary",
+        "--coverage"
+    ]
+    
+    # Conditionally add config.vlt if it exists
+    if os.path.exists("config.vlt"):
+        cmd_verilate.append("config.vlt")
+    
+    cmd_verilate.extend(RTL_SOURCES)
+    cmd_verilate.extend([TESTBENCH, "--top-module", TB_MODULE])
+    
+    print(f"Running Verilator compilation...")
+    run_command(cmd_verilate)
+    
+    # 2. Run Simulation
+    # ./obj_dir/V[TB_MODULE]
+    binary_name = f"V{TB_MODULE}" + EXE_EXT
+    binary_path = os.path.join("obj_dir", binary_name)
+    
+    print(f"Running simulation binary: {binary_path}...")
+    run_command([binary_path])
+    
+    # 3. Generate Report Info
+    # verilator_coverage --write-info coverage.info coverage.dat
+    print("Generating coverage info...")
+    run_command([VERILATOR_COVERAGE, "--write-info", "coverage.info", "coverage.dat"])
+    
+    # 4. View Results (Annotated Source in obj_dir)
+    # verilator_coverage --annotate-points --annotate obj_dir coverage.dat
+    print("Generating annotated source code in obj_dir/...")
+    run_command([VERILATOR_COVERAGE, "--annotate-points", "--annotate", "obj_dir", "coverage.dat"])
+
+    # 5. Parse annotated file for statistics
+    # Target file: obj_dir/fpmul.v (derived from TOP_MODULE)
+    annotated_file = os.path.join("obj_dir", f"{TOP_MODULE}.v")
+    
+    if os.path.exists(annotated_file):
+        try:
+            with open(annotated_file, "r") as f:
+                lines = f.readlines()
+
+            num_positive = 0
+            num_total_neg = 0
+            num_real_neg = 0
+
+            # Regex patterns matching grep
+            # Matches lines starting with +xxxxxx (e.g. +000012)
+            re_pos = re.compile(r"^\+[0-9]{6}")    
+            # Matches lines starting with -xxxxxx (e.g. -000000 or -000005)
+            re_total_neg = re.compile(r"^-[0-9]{6}") 
+            # Matches lines specifically starting with -000000
+            re_real_neg = re.compile(r"^-000000")   
+
+            for line in lines:
+                if re_pos.match(line):
+                    num_positive += 1
+                
+                # Note: -000000 matches both "total_neg" and "real_neg" logic
+                if re_total_neg.match(line):
+                    num_total_neg += 1
+                if re_real_neg.match(line):
+                    num_real_neg += 1
+
+            # Calculate Percentage
+            denominator = num_total_neg + num_positive
+            percent_miss = (num_real_neg / denominator) if denominator > 0 else 0.0
+            percent_coverage = (1 - percent_miss) * 100
+
+            print("-" * 30)
+            print(f"num_positive: {num_positive}")
+            print(f"num_total_neg: {num_total_neg}")
+            print(f"num_real_neg: {num_real_neg}")
+            print(f"percent_coverage: {percent_coverage:.4f}%")
+            print("-" * 30)
+
+        except Exception as e:
+            print(f"[WARN] Failed to calculate coverage stats: {e}")
+    else:
+        print(f"[WARN] Annotated file not found: {annotated_file}")
+
 def sim_gates():
     if not os.path.exists(SYN_OUTPUT):
         synthesize()
@@ -149,22 +265,24 @@ def sim_gates():
 
 def main():
     parser = argparse.ArgumentParser(description="Build and Simulate FPMul")
-    parser.add_argument("target", nargs="?", choices=["clean", "syn", "simrtl", "simgates"], help="Build target")
+    parser.add_argument("target", nargs="?", choices=["clean", "syn", "simrtl", "simgates", "rtlCoverage"], help="Build target")
     args = parser.parse_args()
 
     if args.target is None:
         print("Usage: python manage.py [command]")
         print("\nAvailable commands:")
-        print("  clean     : Remove generated files")
-        print("  syn       : Run Yosys synthesis (creates fpmul_syn.v)")
-        print("  simrtl    : Run RTL simulation (uses fpmul.v)")
-        print("  simgates  : Run Gate-level simulation (uses fpmul_syn.v)")
+        print("  clean       : Remove generated files")
+        print("  syn         : Run Yosys synthesis (creates fpmul_syn.v)")
+        print("  simrtl      : Run RTL simulation (uses fpmul.v)")
+        print("  simgates    : Run Gate-level simulation (uses fpmul_syn.v)")
+        print("  rtlCoverage : Run Verilator coverage flow (generates annotated source in obj_dir)")
         sys.exit(0)
 
     if args.target == "clean": clean()
     elif args.target == "syn": synthesize()
     elif args.target == "simrtl": sim_rtl()
     elif args.target == "simgates": sim_gates()
+    elif args.target == "rtlCoverage": sim_rtl_coverage()
 
 if __name__ == "__main__":
     main()
